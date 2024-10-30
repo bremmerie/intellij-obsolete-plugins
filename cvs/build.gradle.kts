@@ -13,8 +13,8 @@ dependencies {
     implementation(files("lib/trilead-ssh2-build213.jar"))
 }
 
-version = "223.0"
+version = "2023.2"
 
 intellij {
-    version.set("2022.3")
+    version.set("2023.2")
 }
