@@ -19,42 +19,46 @@ import com.intellij.cvsSupport2.config.CvsApplicationLevelConfiguration;
 import com.intellij.cvsSupport2.connections.CvsEnvironment;
 import com.intellij.cvsSupport2.cvshandlers.CvsHandler;
 import com.intellij.cvsSupport2.errorHandling.CannotFindCvsRootException;
-import com.intellij.openapi.util.AtomicNotNullLazyValue;
-import com.intellij.openapi.util.NotNullLazyValue;
 import com.intellij.openapi.vcs.VcsException;
 import com.intellij.util.EnvironmentUtil;
 import org.jetbrains.annotations.NotNull;
 import org.netbeans.lib.cvsclient.command.CommandAbortedException;
 import org.netbeans.lib.cvsclient.command.GlobalOptions;
 
+import java.util.concurrent.atomic.AtomicReference;
 import java.io.File;
 import java.util.*;
 
 public abstract class CvsOperation {
-  private static final NotNullLazyValue<Map<String, String>> ourCvsEnvironment = new AtomicNotNullLazyValue<Map<String, String>>() {
-    @NotNull
-    @Override
-    protected Map<String, String> compute() {
-      Map<String, String> cvsEnv = new HashMap<>();
+  private static final AtomicReference<Map<String, String>> ourCvsEnvironment = new AtomicReference<>();
 
-      Map<String, String> knownToCvs = EnvironmentUtil.getEnvironmentMap();
-      @SuppressWarnings("SpellCheckingInspection") String[] toCvs = {
-        "CVSIGNORE", "CVSWRAPPERS", "CVSREAD", "CVSREADONLYFS", "CVSUMASK",
-        "CVSROOT", "CVSEDITOR", "EDITOR", "VISUAL", "PATH", "HOME", "HOMEPATH", "HOMEDRIVE", "CVS_RSH", "CVS_SERVER",
-        "CVS_PASSFILE", "CVS_CLIENT_PORT", "CVS_PROXY_PORT", "CVS_RCMD_PORT", "CVS_CLIENT_LOG",
-        "CVS_SERVER_SLEEP", "CVS_IGNORE_REMOTE_ROOT", "CVS_LOCAL_BRANCH_NUM", "COMSPEC", "TMPDIR",
-        "CVS_PID", "COMSPEC", "CVS_VERIFY_TEMPLATE", "CVS_NOBASES", "CVS_SIGN_COMMITS", "CVS_VERIFY_CHECKOUTS"
-      };
-      for (String name : toCvs) {
-        String value = knownToCvs.get(name);
-        if (value != null) {
-          cvsEnv.put(name, value);
+  private static Map<String, String> getCvsEnvironment() {
+    Map<String, String> cvsEnv = ourCvsEnvironment.get();
+    if (cvsEnv == null) {
+      synchronized (ourCvsEnvironment) {
+        cvsEnv = ourCvsEnvironment.get();
+        if (cvsEnv == null) {
+          cvsEnv = new HashMap<>();
+          Map<String, String> knownToCvs = EnvironmentUtil.getEnvironmentMap();
+          @SuppressWarnings("SpellCheckingInspection") String[] toCvs = {
+                  "CVSIGNORE", "CVSWRAPPERS", "CVSREAD", "CVSREADONLYFS", "CVSUMASK",
+                  "CVSROOT", "CVSEDITOR", "EDITOR", "VISUAL", "PATH", "HOME", "HOMEPATH", "HOMEDRIVE", "CVS_RSH", "CVS_SERVER",
+                  "CVS_PASSFILE", "CVS_CLIENT_PORT", "CVS_PROXY_PORT", "CVS_RCMD_PORT", "CVS_CLIENT_LOG",
+                  "CVS_SERVER_SLEEP", "CVS_IGNORE_REMOTE_ROOT", "CVS_LOCAL_BRANCH_NUM", "COMSPEC", "TMPDIR",
+                  "CVS_PID", "COMSPEC", "CVS_VERIFY_TEMPLATE", "CVS_NOBASES", "CVS_SIGN_COMMITS", "CVS_VERIFY_CHECKOUTS"
+          };
+          for (String name : toCvs) {
+            String value = knownToCvs.get(name);
+            if (value != null) {
+              cvsEnv.put(name, value);
+            }
+          }
+          ourCvsEnvironment.set(cvsEnv);
         }
       }
-
-      return cvsEnv;
     }
-  };
+    return cvsEnv;
+  }
 
   private final Collection<Runnable> myFinishActions = new ArrayList<>();
 
@@ -73,7 +77,7 @@ public abstract class CvsOperation {
   protected void modifyOptions(GlobalOptions options) {
     options.setUseGzip(CvsApplicationLevelConfiguration.getInstance().USE_GZIP);
     if (CvsApplicationLevelConfiguration.getInstance().SEND_ENVIRONMENT_VARIABLES_TO_SERVER) {
-      options.setEnvVariables(ourCvsEnvironment.getValue());
+      options.setEnvVariables(getCvsEnvironment());
     }
   }
 

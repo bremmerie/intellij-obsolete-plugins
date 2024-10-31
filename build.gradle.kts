@@ -13,7 +13,7 @@ tasks {
 }
 
 intellij {
-    version.set("2020.3")
+    version.set("2023.2")
 }
 
 allprojects {
@@ -25,10 +25,10 @@ allprojects {
 subprojects {
     apply(plugin = "org.jetbrains.intellij")
 
-    version = "203." + (System.getenv("BUILD_NUMBER").takeIf { !it.isNullOrEmpty() } ?: "0")
+    version = "232." + (System.getenv("BUILD_NUMBER").takeIf { !it.isNullOrEmpty() } ?: "0")
 
     intellij {
-        version.set("2020.3")
+        version.set("2023.2")
     }
 
     tasks {
@@ -38,7 +38,7 @@ subprojects {
         }
 
         patchPluginXml {
-            sinceBuild.set("203.1")
+            sinceBuild.set("203.2")
             untilBuild.set("")
         }
 
